@@ -1,6 +1,7 @@
 import argparse
 import os
 
+import joblib
 import numpy as np
 from sklearn.model_selection import train_test_split
 
@@ -9,6 +10,11 @@ from .classes.model import ModelFactory
 
 
 def load_features(base_path: str, augment_data=False) -> tuple[list[list[float]], list[str]]:
+    cache_path = os.path.join(base_path, 'features.joblib')
+    if os.path.exists(cache_path):
+        print('Loading cached features...')
+        return joblib.load(cache_path)
+
     X = []
     y = []
     for label in os.listdir(base_path):
@@ -23,6 +29,7 @@ def load_features(base_path: str, augment_data=False) -> tuple[list[list[float]]
         X.extend(label_features)
         y.extend([label] * len(label_features))
 
+    joblib.dump((X, y), cache_path)
     return X, y
 
 

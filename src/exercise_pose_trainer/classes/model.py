@@ -5,12 +5,41 @@ import joblib
 import numpy as np
 from sklearn import svm
 from sklearn.base import BaseEstimator
+from sklearn.calibration import LabelEncoder
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import GridSearchCV
 from skl2onnx import convert_sklearn
 from skl2onnx.common.data_types import FloatTensorType
+
+from keras.models import Sequential, load_model
+from keras.layers import Input, Dense, Dropout, BatchNormalization
+from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping, ReduceLROnPlateau
+from keras.utils import to_categorical
+
+
+class IClassifier(abc.ABC):
+    @abc.abstractmethod
+    def fit(self, X, y) -> None:
+        pass
+
+    @abc.abstractmethod
+    def get_params(self) -> dict:
+        pass
+
+    @abc.abstractmethod
+    def predict(self, X) -> list:
+        pass
+
+    @abc.abstractmethod
+    def generate_report(self, X_test, y_test) -> None:
+        pass
+
+    @abc.abstractmethod
+    def save_model(self) -> None:
+        pass
 
 
 class Model(abc.ABC):
@@ -19,7 +48,6 @@ class Model(abc.ABC):
         self._name: str
         self._report: str
         self._cm: np.ndarray
-        self._model: BaseEstimator
         self._param_grid: dict[str, list[None | str | int | float]]
         self._shape: tuple[int, ...]
 
@@ -69,7 +97,9 @@ class Model(abc.ABC):
 class ModelFactory:
     @staticmethod
     def get_model(model_type: str) -> Model:
-        if model_type == 'gradient_boosting':
+        if model_type == 'fcnn':
+            return _FCNNModel()
+        elif model_type == 'gradient_boosting':
             return _GradientBoostingModel()
         elif model_type == 'logistic_regression':
             return _LogisticRegressionModel()
@@ -86,7 +116,93 @@ class ModelFactory:
         if not os.path.exists(model_path):
             raise FileNotFoundError(f'Model file not found: {model_path}')
         model = joblib.load(model_path)
+
+        if model_type == 'fcnn':
+            model._model = load_model(os.path.join(
+                'models', model_type, 'model.keras'))
+
         return model
+
+
+class _FCNNModel(Model):
+    def __init__(self):
+        self._name = 'fcnn'
+        self._param_grid = {}
+        self._model: Sequential
+        self._label_encoder = LabelEncoder()
+        self._history: dict = {}
+
+    def get_params(self) -> dict:
+        return self._param_grid
+
+    def predict(self, X) -> list:
+        y_pred = self._model.predict(np.array(X))
+        y_pred_classes = np.argmax(y_pred, axis=1)
+        y_pred_labels = list(
+            self._label_encoder.inverse_transform(y_pred_classes))
+        return y_pred_labels
+
+    def fit(self, X, y) -> None:
+        X, y = np.array(X), np.array(y)
+        self._shape = X.shape[1:]
+        num_classes = len(np.unique(y))
+        self._model = Sequential([
+            Input(shape=self._shape),
+
+            Dense(64, activation='relu'),
+            BatchNormalization(),
+            Dropout(0.3),
+
+            Dense(32, activation='relu'),
+            BatchNormalization(),
+            Dropout(0.3),
+
+            Dense(num_classes, activation='softmax' if num_classes > 2 else 'sigmoid')
+        ])
+
+        self._model.compile(
+            optimizer=Adam(learning_rate=1e-4),  # type: ignore
+            loss='categorical_crossentropy' if num_classes > 2 else 'binary_crossentropy',
+            metrics=['categorical_accuracy']
+        )
+
+        y_encoded = self._label_encoder.fit_transform(y)
+        y_onehot = to_categorical(y_encoded)
+        early_stopping_callback = EarlyStopping(
+            patience=200, restore_best_weights=True)
+        reduce_lr_callback = ReduceLROnPlateau(patience=50)
+        self._history = self._model.fit(X, y_onehot,
+                                        # epochs=10000,
+                                        epochs=1000,
+                                        # epochs=100,
+                                        # validation_data=(X_test, y_test),
+                                        callbacks=[early_stopping_callback,
+                                                   reduce_lr_callback],
+                                        # verbose=1
+                                        )
+
+    def generate_report(self, X_test, y_test) -> None:
+        y_pred_probs = self._model.predict(X_test)
+        y_pred_encoded = np.argmax(y_pred_probs, axis=1)
+        y_pred_decoded = self._label_encoder.inverse_transform(y_pred_encoded)
+        report = classification_report(
+            y_test, y_pred_decoded, digits=4)
+        cm = confusion_matrix(y_test, y_pred_decoded)
+        print(report)
+        print(cm)
+
+        self._report = str(report)
+        self._cm = cm
+
+    def save_model(self) -> None:
+        os.makedirs(os.path.join('models', self._name), exist_ok=True)
+        model_path = os.path.join('models', self._name)
+
+        self._model.save(os.path.join(model_path, 'model.keras'))
+        aux = self._model
+        self._model = None  # type: ignore
+        joblib.dump(self, os.path.join(model_path, 'model.joblib'))
+        self._model = aux
 
 
 class _GradientBoostingModel(Model):

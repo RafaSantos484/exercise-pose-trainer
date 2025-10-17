@@ -39,8 +39,11 @@ def main():
     parser.add_argument(
         'model',
         type=str,
-        choices=['gradient_boosting',
-                 'logistic_regression', 'random_forest', 'svm'],
+        choices=['fcnn',
+                 'gradient_boosting',
+                 'logistic_regression',
+                 'random_forest',
+                 'svm'],
         help='Model type to use',
     )
     parser.add_argument('--seed', type=int,
@@ -54,6 +57,7 @@ def main():
         X, y, test_size=0.3, random_state=args.seed)
 
     model = ModelFactory.get_model(args.model)
+    print(model._name)
     model.fit(X_train, y_train)
     params = model.get_params()
     print(params)

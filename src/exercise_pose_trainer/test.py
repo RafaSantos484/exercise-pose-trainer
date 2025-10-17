@@ -13,8 +13,11 @@ def main():
     parser.add_argument(
         'model',
         type=str,
-        choices=['gradient_boosting',
-                 'logistic_regression', 'random_forest', 'svm'],
+        choices=['fcnn',
+                 'gradient_boosting',
+                 'logistic_regression',
+                 'random_forest',
+                 'svm'],
         help='Model type to use',
     )
     args = parser.parse_args()

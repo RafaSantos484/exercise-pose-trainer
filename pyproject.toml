@@ -6,16 +6,23 @@ authors = [
     {name = "rafael.santos",email = "rafaelsantos32141@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.11"
 dependencies = [
     "mediapipe (>=0.10.21,<0.11.0)",
     "scikit-learn (>=1.7.2,<2.0.0)",
-    "skl2onnx (>=1.19.1,<2.0.0)"
+    "skl2onnx (>=1.19.1,<2.0.0)",
+    "tensorflow-io-gcs-filesystem (==0.31.0)",
+    "tensorflow (==2.19.0)",
 ]
 
 [tool.poetry]
 packages = [{include = "exercise_pose_trainer", from = "src"}]
 
+
+[[tool.poetry.source]]
+name = "pytorch_cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

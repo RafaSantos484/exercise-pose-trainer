@@ -5,6 +5,7 @@ import joblib
 import numpy as np
 from sklearn import svm
 from sklearn.base import BaseEstimator
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import GridSearchCV
 from skl2onnx import convert_sklearn
 from skl2onnx.common.data_types import FloatTensorType
@@ -14,6 +15,8 @@ class Model(abc.ABC):
     def __init__(self) -> None:
         # super().__init__()
         self._name: str
+        self._report: str
+        self._cm: np.ndarray
         self._model: BaseEstimator
         self._param_grid: dict[str, list[str | int | float]]
         self._shape: tuple[int, ...]
@@ -21,7 +24,6 @@ class Model(abc.ABC):
         if type(self) is Model:
             raise TypeError(
                 'Model is an abstract class and cannot be instantiated directly.')
-
 
     def fit(self, X, y) -> None:
         X, y = np.array(X), np.array(y)
@@ -34,8 +36,18 @@ class Model(abc.ABC):
     def get_params(self) -> dict:
         return self._model.get_params()
 
-    def predict(self, X):
+    def predict(self, X) -> list:
         return self._model.predict(X)  # type: ignore
+
+    def generate_report(self, X_test, y_test) -> None:
+        y_pred = self.predict(X_test)
+        report = classification_report(y_test, y_pred)
+        cm = confusion_matrix(y_test, y_pred)
+        print(report)
+        print(cm)
+
+        self._report = str(report)
+        self._cm = cm
 
     def save_model(self) -> None:
         os.makedirs(os.path.join('models', self._name), exist_ok=True)
@@ -59,6 +71,14 @@ class ModelFactory:
             return _SVMModel()
         else:
             raise ValueError(f'Unknown model type: {model_type}')
+
+    @staticmethod
+    def load_model(model_type: str) -> Model:
+        model_path = os.path.join('models', model_type, 'model.joblib')
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f'Model file not found: {model_path}')
+        model = joblib.load(model_path)
+        return model
 
 
 class _SVMModel(Model):

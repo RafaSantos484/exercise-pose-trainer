@@ -1,11 +1,13 @@
+import os
 import cv2
 import mediapipe as mp
 from mediapipe.tasks.python import vision
 from mediapipe.tasks import python
 
 from exercise_pose_trainer.classes.point3d import Point3d
+from exercise_pose_trainer.classes.utils import Utils
 
-landmarks_dict: dict[str, int] = {
+_LANDMARKS_DICT: dict[str, int] = {
     'nose': 0,
     'left_eye_inner': 1,
     'left_eye': 2,
@@ -41,6 +43,12 @@ landmarks_dict: dict[str, int] = {
     'right_foot_index': 32,
 }
 
+_POINTS_TRIPLETS = [('left_wrist', 'left_elbow', 'left_shoulder'),
+                    ('right_wrist', 'right_elbow', 'right_shoulder'),
+                    ('left_elbow', 'left_shoulder', 'right_shoulder'),
+                    ('right_elbow', 'right_shoulder', 'left_shoulder'),
+                    ]
+
 
 class Landmarker:
     _model = vision.PoseLandmarker.create_from_options(
@@ -53,7 +61,7 @@ class Landmarker:
     )
 
     @classmethod
-    def get_points(cls, image_path: str, mirror=False) -> list[Point3d] | None:
+    def get_points_from_img(cls, image_path: str, mirror=False) -> list[Point3d] | None:
         image = cv2.imread(image_path)
         if mirror:
             image = cv2.flip(image, 1)
@@ -68,3 +76,30 @@ class Landmarker:
         landmarks = result.pose_world_landmarks[0]
         points = [Point3d.from_landmark(lm) for lm in landmarks]
         return points
+
+    @classmethod
+    def get_angles_features_from_imgs(cls, imgs_paths: list[str], augment_data=False) -> tuple[list[list[float]], list[str]]:
+        X = []
+        sucessful_img_paths = []
+        for img_path in imgs_paths:
+            if not Utils.is_img_file(img_path):
+                continue
+
+            mirror_options = [False, True] if augment_data else [False]
+            for mirror in mirror_options:
+                points = cls.get_points_from_img(img_path, mirror=mirror)
+                if points is None:
+                    continue
+
+                angles = []
+                for p1_name, p2_name, p3_name in _POINTS_TRIPLETS:
+                    p1 = points[_LANDMARKS_DICT[p1_name]]
+                    p2 = points[_LANDMARKS_DICT[p2_name]]
+                    p3 = points[_LANDMARKS_DICT[p3_name]]
+                    angle = Point3d.get_angle_between(p1, p2, p3)
+                    angles.append(angle)
+
+                X.append(angles)
+                sucessful_img_paths.append(img_path)
+
+        return X, sucessful_img_paths

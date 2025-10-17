@@ -1,21 +1,32 @@
 import abc
+import os
 
+import joblib
+import numpy as np
 from sklearn import svm
 from sklearn.base import BaseEstimator
 from sklearn.model_selection import GridSearchCV
+from skl2onnx import convert_sklearn
+from skl2onnx.common.data_types import FloatTensorType
 
 
 class Model(abc.ABC):
     def __init__(self) -> None:
         # super().__init__()
+        self._name: str
         self._model: BaseEstimator
         self._param_grid: dict[str, list[str | int | float]]
+        self._shape: tuple[int, ...]
 
         if type(self) is Model:
             raise TypeError(
                 'Model is an abstract class and cannot be instantiated directly.')
 
+
     def fit(self, X, y) -> None:
+        X, y = np.array(X), np.array(y)
+        self._shape = X.shape[1:]
+
         grid_search = GridSearchCV(self._model, self._param_grid, n_jobs=-1)
         grid_search.fit(X, y)
         self._model = grid_search.best_estimator_
@@ -26,18 +37,33 @@ class Model(abc.ABC):
     def predict(self, X):
         return self._model.predict(X)  # type: ignore
 
+    def save_model(self) -> None:
+        os.makedirs(os.path.join('models', self._name), exist_ok=True)
+        model_path = os.path.join('models', self._name)
+
+        joblib.dump(self, os.path.join(model_path, 'model.joblib'))
+
+        shape = [None, *self._shape]
+        initial_type = [('input', FloatTensorType(shape))]
+        onnx_model = convert_sklearn(self._model, initial_types=initial_type)
+        if isinstance(onnx_model, tuple):
+            onnx_model = onnx_model[0]
+        with open(os.path.join(model_path, 'model.onnx'), 'wb') as f:
+            f.write(onnx_model.SerializeToString())
+
 
 class ModelFactory:
     @staticmethod
     def get_model(model_type: str) -> Model:
         if model_type == 'svm':
-            return SVMModel()
+            return _SVMModel()
         else:
             raise ValueError(f'Unknown model type: {model_type}')
 
 
-class SVMModel(Model):
+class _SVMModel(Model):
     def __init__(self):
+        self._name = 'svm'
         self._model = svm.SVC()
         '''
         self._param_grid = {

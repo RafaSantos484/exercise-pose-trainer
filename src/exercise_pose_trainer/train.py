@@ -2,7 +2,7 @@ import argparse
 import os
 
 import numpy as np
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import train_test_split
 
 from .classes.model import ModelFactory
@@ -25,8 +25,8 @@ def load_features(base_path: str):
         if not os.path.isdir(label_path):
             continue
 
-        # for feature_file in os.listdir(label_path)[:10]:
-        for feature_file in os.listdir(label_path):
+        for feature_file in os.listdir(label_path)[:10]:
+        # for feature_file in os.listdir(label_path):
             if not Utils.is_img_file(feature_file):
                 continue
 
@@ -74,4 +74,8 @@ def main():
 
     y_pred = model.predict(X_test)
     report = classification_report(y_test, y_pred, digits=4)
+    cm = confusion_matrix(y_test, y_pred)
     print(report)
+    print(cm)
+
+    model.save_model()

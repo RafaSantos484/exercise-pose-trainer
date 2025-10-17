@@ -47,6 +47,23 @@ _POINTS_TRIPLETS = [('left_wrist', 'left_elbow', 'left_shoulder'),
                     ('right_wrist', 'right_elbow', 'right_shoulder'),
                     ('left_elbow', 'left_shoulder', 'right_shoulder'),
                     ('right_elbow', 'right_shoulder', 'left_shoulder'),
+
+                    ('left_shoulder', 'left_hip', 'left_knee'),
+                    ('right_shoulder', 'right_hip', 'right_knee'),
+                    ('left_shoulder', 'left_hip', 'right_hip'),
+                    ('right_shoulder', 'right_hip', 'left_hip'),
+
+                    ('left_hip', 'left_knee', 'left_ankle'),
+                    ('right_hip', 'right_knee', 'right_ankle'),
+                    ('left_knee', 'left_ankle', 'right_ankle'),
+                    ('right_knee', 'right_ankle', 'left_ankle'),
+
+                    ('left_wrist', 'left_elbow', 'left_hip'),
+                    ('right_wrist', 'right_elbow', 'right_hip'),
+                    ('left_wrist', 'left_elbow', 'left_knee'),
+                    ('right_wrist', 'right_elbow', 'right_knee'),
+                    ('left_wrist', 'left_elbow', 'left_ankle'),
+                    ('right_wrist', 'right_elbow', 'right_ankle'),
                     ]
 
 

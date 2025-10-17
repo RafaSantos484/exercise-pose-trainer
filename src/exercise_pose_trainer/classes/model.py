@@ -5,6 +5,7 @@ import joblib
 import numpy as np
 from sklearn import svm
 from sklearn.base import BaseEstimator
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import GridSearchCV
 from skl2onnx import convert_sklearn
@@ -18,7 +19,7 @@ class Model(abc.ABC):
         self._report: str
         self._cm: np.ndarray
         self._model: BaseEstimator
-        self._param_grid: dict[str, list[str | int | float]]
+        self._param_grid: dict[str, list[None | str | int | float]]
         self._shape: tuple[int, ...]
 
         if type(self) is Model:
@@ -41,7 +42,7 @@ class Model(abc.ABC):
 
     def generate_report(self, X_test, y_test) -> None:
         y_pred = self.predict(X_test)
-        report = classification_report(y_test, y_pred)
+        report = classification_report(y_test, y_pred, digits=4)
         cm = confusion_matrix(y_test, y_pred)
         print(report)
         print(cm)
@@ -69,6 +70,8 @@ class ModelFactory:
     def get_model(model_type: str) -> Model:
         if model_type == 'svm':
             return _SVMModel()
+        elif model_type == 'random_forest':
+            return _RandomForestModel()
         else:
             raise ValueError(f'Unknown model type: {model_type}')
 
@@ -100,4 +103,17 @@ class _SVMModel(Model):
             'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
             'degree': [2, 3, 4, 5, 10],
             'gamma': ['scale', 'auto']
+        }
+
+
+class _RandomForestModel(Model):
+    def __init__(self):
+        self._name = 'random_forest'
+        self._model = RandomForestClassifier()
+        self._param_grid = {
+            "n_estimators": [10, 50, 100, 200],
+            "criterion": ["gini", "entropy", "log_loss"],
+            "max_depth": [None, 10, 20, 50],
+            "min_samples_split": [2, 5, 10],
+            "min_samples_leaf": [1, 2, 5, 10]
         }

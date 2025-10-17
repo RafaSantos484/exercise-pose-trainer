@@ -5,7 +5,8 @@ import joblib
 import numpy as np
 from sklearn import svm
 from sklearn.base import BaseEstimator
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, confusion_matrix
 from sklearn.model_selection import GridSearchCV
 from skl2onnx import convert_sklearn
@@ -68,10 +69,14 @@ class Model(abc.ABC):
 class ModelFactory:
     @staticmethod
     def get_model(model_type: str) -> Model:
-        if model_type == 'svm':
-            return _SVMModel()
+        if model_type == 'gradient_boosting':
+            return _GradientBoostingModel()
+        elif model_type == 'logistic_regression':
+            return _LogisticRegressionModel()
         elif model_type == 'random_forest':
             return _RandomForestModel()
+        elif model_type == 'svm':
+            return _SVMModel()
         else:
             raise ValueError(f'Unknown model type: {model_type}')
 
@@ -82,6 +87,44 @@ class ModelFactory:
             raise FileNotFoundError(f'Model file not found: {model_path}')
         model = joblib.load(model_path)
         return model
+
+
+class _GradientBoostingModel(Model):
+    def __init__(self):
+        self._name = 'gradient_boosting'
+        self._model = GradientBoostingClassifier()
+        self._param_grid = {
+            "learning_rate": [0.01, 0.1, 0.5, 1],
+            "n_estimators": [50, 100, 200, 300, 500],
+            "subsample": [0.6, 0.8, 1.0],
+            "min_samples_split": [2, 5, 10, 20, 50],
+            "max_depth": [3, 5, 10]
+        }
+
+
+class _LogisticRegressionModel(Model):
+    def __init__(self):
+        self._name = 'logistic_regression'
+        self._model = LogisticRegression()
+        self._param_grid = {
+            "penalty": [None, "l1", "l2", "elasticnet"],
+            "C": [0.01, 0.1, 1, 10, 50, 100],
+            "solver": ["lbfgs", "liblinear", "newton-cg", "newton-cholesky", "sag", "saga"],
+            "max_iter": [None, 10, 50, 100, 200]
+        }
+
+
+class _RandomForestModel(Model):
+    def __init__(self):
+        self._name = 'random_forest'
+        self._model = RandomForestClassifier()
+        self._param_grid = {
+            "n_estimators": [10, 50, 100, 200],
+            "criterion": ["gini", "entropy", "log_loss"],
+            "max_depth": [None, 10, 20, 50],
+            "min_samples_split": [2, 5, 10],
+            "min_samples_leaf": [1, 2, 5, 10]
+        }
 
 
 class _SVMModel(Model):
@@ -103,17 +146,4 @@ class _SVMModel(Model):
             'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
             'degree': [2, 3, 4, 5, 10],
             'gamma': ['scale', 'auto']
-        }
-
-
-class _RandomForestModel(Model):
-    def __init__(self):
-        self._name = 'random_forest'
-        self._model = RandomForestClassifier()
-        self._param_grid = {
-            "n_estimators": [10, 50, 100, 200],
-            "criterion": ["gini", "entropy", "log_loss"],
-            "max_depth": [None, 10, 20, 50],
-            "min_samples_split": [2, 5, 10],
-            "min_samples_leaf": [1, 2, 5, 10]
         }

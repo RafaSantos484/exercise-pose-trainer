@@ -31,3 +31,4 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 train = "exercise_pose_trainer.train:main"
 test = "exercise_pose_trainer.test:main"
+rename_files = "exercise_pose_trainer.rename_files:main"

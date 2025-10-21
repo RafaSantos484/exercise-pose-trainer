@@ -1,3 +1,4 @@
+import itertools
 import os
 import cv2
 import mediapipe as mp
@@ -113,29 +114,29 @@ class Landmarker:
             rotation_options = [-15, -5, None, 5,
                                 15] if augment_data else [None]
             scale_options = [0.9, None, 1.1] if augment_data else [None]
-            for mirror in mirror_options:
-                for rotation in rotation_options:
-                    for scale in scale_options:
-                        points = cls.get_points_from_img_path(
-                            img_path,
-                            mirror=mirror,
-                            rotation=rotation,
-                            scale=scale,
-                        )
+            data_augmentations_options = itertools.product(
+                mirror_options, rotation_options, scale_options)
+            for mirror, rotation, scale in data_augmentations_options:
+                points = cls.get_points_from_img_path(
+                    img_path,
+                    mirror=mirror,
+                    rotation=rotation,
+                    scale=scale,
+                )
 
-                        if points is None:
-                            continue
+                if points is None:
+                    continue
 
-                        angles = []
-                        for p1_name, p2_name, p3_name in _POINTS_TRIPLETS:
-                            p1 = points[_LANDMARKS_DICT[p1_name]]
-                            p2 = points[_LANDMARKS_DICT[p2_name]]
-                            p3 = points[_LANDMARKS_DICT[p3_name]]
-                            angle = Point3d.get_angle_between(p1, p2, p3)
-                            angles.append(angle)
+                angles = []
+                for p1_name, p2_name, p3_name in _POINTS_TRIPLETS:
+                    p1 = points[_LANDMARKS_DICT[p1_name]]
+                    p2 = points[_LANDMARKS_DICT[p2_name]]
+                    p3 = points[_LANDMARKS_DICT[p3_name]]
+                    angle = Point3d.get_angle_between(p1, p2, p3)
+                    angles.append(angle)
 
-                        X.append(angles)
-                        if not augment_data:
-                            sucessful_img_paths.append(img_path)
+                X.append(angles)
+                if not augment_data:
+                    sucessful_img_paths.append(img_path)
 
         return X, sucessful_img_paths

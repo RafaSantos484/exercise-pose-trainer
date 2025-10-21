@@ -59,7 +59,8 @@ class Model(abc.ABC):
         X, y = np.array(X), np.array(y)
         self._shape = X.shape[1:]
 
-        grid_search = GridSearchCV(self._model, self._param_grid, n_jobs=-1)
+        grid_search = GridSearchCV(
+            self._model, self._param_grid, n_jobs=-1, verbose=1)
         grid_search.fit(X, y)
         self._model = grid_search.best_estimator_
 
@@ -73,8 +74,6 @@ class Model(abc.ABC):
         y_pred = self.predict(X_test)
         report = classification_report(y_test, y_pred, digits=4)
         cm = confusion_matrix(y_test, y_pred)
-        # print(report)
-        # print(cm)
 
         self._report = str(report)
         self._cm = cm
@@ -94,6 +93,7 @@ class Model(abc.ABC):
             f.write(onnx_model.SerializeToString())
 
     def view_report(self) -> None:
+        print(self.get_params())
         print(self._report)
         print(self._cm)
 
@@ -202,8 +202,6 @@ class _FCNNModel(Model):
         report = classification_report(
             y_test, y_pred_decoded, digits=4)
         cm = confusion_matrix(y_test, y_pred_decoded)
-        print(report)
-        print(cm)
 
         self._report = str(report)
         self._cm = cm
@@ -238,9 +236,9 @@ class _LogisticRegressionModel(Model):
         self._model = LogisticRegression()
         self._param_grid = {
             "penalty": [None, "l1", "l2", "elasticnet"],
-            "C": [0.01, 0.1, 1, 10, 50, 100],
+            "C": [0.01, 0.1, 1, 10, 100],
             "solver": ["lbfgs", "liblinear", "newton-cg", "newton-cholesky", "sag", "saga"],
-            "max_iter": [None, 10, 50, 100, 200]
+            "max_iter": [100, 1000, 10000]
         }
 
 

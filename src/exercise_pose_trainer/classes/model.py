@@ -55,7 +55,7 @@ class Model(abc.ABC):
             raise TypeError(
                 'Model is an abstract class and cannot be instantiated directly.')
 
-    def fit(self, X, y) -> None:
+    def fit(self, X, y, validation_data: tuple[np.ndarray, np.ndarray] | None = None) -> None:
         X, y = np.array(X), np.array(y)
         self._shape = X.shape[1:]
 
@@ -137,12 +137,16 @@ class _FCNNModel(Model):
 
     def predict(self, X) -> list:
         y_pred = self._model.predict(np.array(X))
-        y_pred_classes = np.argmax(y_pred, axis=1)
-        y_pred_labels = list(
-            self._label_encoder.inverse_transform(y_pred_classes))
-        return y_pred_labels
+        y_pred_encoded_labels = np.argmax(y_pred, axis=1)
+        y_pred_labels = self._label_encoder.inverse_transform(
+            y_pred_encoded_labels)
+        y_pred_probs = np.max(y_pred, axis=1)
 
-    def fit(self, X, y) -> None:
+        y_pred_labels_probs = [f'{label} ({prob*100:.2f}%)'
+                               for label, prob in zip(y_pred_labels, y_pred_probs)]
+        return y_pred_labels_probs
+
+    def fit(self, X, y, validation_data: tuple[np.ndarray, np.ndarray] | None = None) -> None:
         X, y = np.array(X), np.array(y)
         self._shape = X.shape[1:]
         num_classes = len(np.unique(y))
@@ -161,21 +165,27 @@ class _FCNNModel(Model):
         ])
 
         self._model.compile(
-            optimizer=Adam(learning_rate=1e-4),  # type: ignore
+            optimizer=Adam(learning_rate=1e-3),  # type: ignore
             loss='categorical_crossentropy' if num_classes > 2 else 'binary_crossentropy',
             metrics=['categorical_accuracy']
         )
 
         y_encoded = self._label_encoder.fit_transform(y)
         y_onehot = to_categorical(y_encoded)
+        if validation_data is not None:
+            X_val, y_val = validation_data
+            y_val_encoded = self._label_encoder.transform(y_val)
+            y_val_onehot = to_categorical(y_val_encoded)
+            validation_data = (X_val, y_val_onehot)
+
         early_stopping_callback = EarlyStopping(
             patience=200, restore_best_weights=True)
         reduce_lr_callback = ReduceLROnPlateau(patience=50)
         self._history = self._model.fit(X, y_onehot,
-                                        # epochs=10000,
-                                        epochs=1000,
+                                        epochs=10000,
+                                        # epochs=1000,
                                         # epochs=100,
-                                        # validation_data=(X_test, y_test),
+                                        validation_data=validation_data,
                                         callbacks=[early_stopping_callback,
                                                    reduce_lr_callback],
                                         # verbose=1

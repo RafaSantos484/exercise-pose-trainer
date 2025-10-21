@@ -79,20 +79,24 @@ class Landmarker:
 
     @classmethod
     def get_points_from_img_path(cls, image_path: str,
-                            mirror=False,
-                            rotation: float | None = None
-                            ) -> list[Point3d] | None:
+                                 mirror=False,
+                                 rotation: float | None = None,
+                                 scale: float | None = None,
+                                 ) -> list[Point3d] | None:
         image = cv2.imread(image_path)
         if mirror:
             image = cv2.flip(image, 1)
         if rotation is not None:
             image = Utils.rotate_img(image, rotation)
+        if scale is not None:
+            image = Utils.scale_img(image, scale)
 
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
         result = cls._model.detect(mp_image)
         if not result.pose_world_landmarks:
-            print(f'No landmarks found for {image_path}')
+            print(
+                f'No landmarks found for {image_path} (mirror={mirror}, rotation={rotation}, scale={scale})')
             return None
 
         landmarks = result.pose_world_landmarks[0]
@@ -108,26 +112,32 @@ class Landmarker:
                 continue
 
             mirror_options = [False, True] if augment_data else [False]
-            rotation_options = [-10, -5, 0, 5, 10] if augment_data else [0]
+            rotation_options = [-15, -5, None, 5,
+                                15] if augment_data else [None]
+            scale_options = [0.9, None, 1.1] if augment_data else [None]
             for mirror in mirror_options:
                 for rotation in rotation_options:
-                    points = cls.get_points_from_img_path(
-                        img_path,
-                        mirror=mirror,
-                        rotation=rotation)
+                    for scale in scale_options:
+                        points = cls.get_points_from_img_path(
+                            img_path,
+                            mirror=mirror,
+                            rotation=rotation,
+                            scale=scale,
+                        )
 
-                    if points is None:
-                        continue
+                        if points is None:
+                            continue
 
-                    angles = []
-                    for p1_name, p2_name, p3_name in _POINTS_TRIPLETS:
-                        p1 = points[_LANDMARKS_DICT[p1_name]]
-                        p2 = points[_LANDMARKS_DICT[p2_name]]
-                        p3 = points[_LANDMARKS_DICT[p3_name]]
-                        angle = Point3d.get_angle_between(p1, p2, p3)
-                        angles.append(angle)
+                        angles = []
+                        for p1_name, p2_name, p3_name in _POINTS_TRIPLETS:
+                            p1 = points[_LANDMARKS_DICT[p1_name]]
+                            p2 = points[_LANDMARKS_DICT[p2_name]]
+                            p3 = points[_LANDMARKS_DICT[p3_name]]
+                            angle = Point3d.get_angle_between(p1, p2, p3)
+                            angles.append(angle)
 
-                    X.append(angles)
-                    sucessful_img_paths.append(img_path)
+                        X.append(angles)
+                        if not augment_data:
+                            sucessful_img_paths.append(img_path)
 
         return X, sucessful_img_paths

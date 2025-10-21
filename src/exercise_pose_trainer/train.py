@@ -57,8 +57,8 @@ def main():
         X, y, test_size=0.3, random_state=args.seed)
 
     model = ModelFactory.get_model(args.model)
-    print(model._name)
-    model.fit(X_train, y_train)
+    validation_data = (X_test, y_test)
+    model.fit(X_train, y_train, validation_data=validation_data)
     params = model.get_params()
     print(params)
     model.generate_report(X_test, y_test)

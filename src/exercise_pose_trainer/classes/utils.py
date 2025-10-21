@@ -22,3 +22,11 @@ class Utils:
         M = cv2.getRotationMatrix2D(center, angle, 1.0)
         rotated = cv2.warpAffine(img, M, (w, h))
         return rotated
+
+    @staticmethod
+    def scale_img(img: MatLike, scale_factor: float) -> MatLike:
+        (h, w) = img.shape[:2]
+        new_dimensions = (int(w * scale_factor), int(h * scale_factor))
+        scaled_img = cv2.resize(img, new_dimensions,
+                                interpolation=cv2.INTER_AREA)
+        return scaled_img

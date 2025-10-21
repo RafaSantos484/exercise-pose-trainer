@@ -73,8 +73,8 @@ class Model(abc.ABC):
         y_pred = self.predict(X_test)
         report = classification_report(y_test, y_pred, digits=4)
         cm = confusion_matrix(y_test, y_pred)
-        print(report)
-        print(cm)
+        # print(report)
+        # print(cm)
 
         self._report = str(report)
         self._cm = cm
@@ -92,6 +92,10 @@ class Model(abc.ABC):
             onnx_model = onnx_model[0]
         with open(os.path.join(model_path, 'model.onnx'), 'wb') as f:
             f.write(onnx_model.SerializeToString())
+
+    def view_report(self) -> None:
+        print(self._report)
+        print(self._cm)
 
 
 class ModelFactory:

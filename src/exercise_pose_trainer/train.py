@@ -62,4 +62,5 @@ def main():
     params = model.get_params()
     print(params)
     model.generate_report(X_test, y_test)
+    model.view_report()
     model.save_model()

@@ -23,7 +23,7 @@ def main():
     args = parser.parse_args()
 
     imgs_paths = [os.path.join(args.path, f) for f in os.listdir(args.path)]
-    X, imgs_paths = Landmarker.get_angles_features_from_imgs(imgs_paths)
+    X, _, imgs_paths = Landmarker.get_angles_features_from_imgs(imgs_paths)
 
     model = ModelFactory.load_model(args.model)
     y_pred = model.predict(X)

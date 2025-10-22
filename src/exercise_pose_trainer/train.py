@@ -5,32 +5,50 @@ import joblib
 import numpy as np
 from sklearn.model_selection import train_test_split
 
+from .classes.utils import Utils
 from .classes.landmarker import Landmarker
 from .classes.model import ModelFactory
 
 
-def load_features(base_path: str, augment_data=False) -> tuple[list[list[float]], list[str]]:
+def load_features(base_path: str, seed: int | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     cache_path = os.path.join(base_path, 'features.joblib')
     if os.path.exists(cache_path):
         print('Loading cached features...')
         return joblib.load(cache_path)
 
-    X = []
     y = []
+    X_imgs_paths = []
     for label in os.listdir(base_path):
         label_path = os.path.join(base_path, label)
         if not os.path.isdir(label_path):
             continue
 
-        imgs_paths = [os.path.join(label_path, f)
-                      for f in os.listdir(label_path)]
-        label_features, _ = Landmarker.get_angles_features_from_imgs(
-            imgs_paths, augment_data=augment_data)
-        X.extend(label_features)
-        y.extend([label] * len(label_features))
+        imgs_paths = []
+        for f in os.listdir(label_path):
+            f_path = os.path.join(label_path, f)
+            if Utils.is_img_file(f_path):
+                imgs_paths.append(f_path)
+        X_imgs_paths.extend(imgs_paths)
+        y.extend([label] * len(imgs_paths))
 
-    joblib.dump((X, y), cache_path)
-    return X, y
+    X_train_imgs_paths, X_test_imgs_paths, y_train, y_test = train_test_split(
+        X_imgs_paths, y, test_size=0.3, random_state=seed)
+
+    print('Extracting features from training images...')
+    X_train, y_train, _ = Landmarker.get_angles_features_from_imgs(
+        X_train_imgs_paths, y=y_train, augment_data=True)
+    print('Extracting features from testing images...')
+    X_test, y_test, _ = Landmarker.get_angles_features_from_imgs(
+        X_test_imgs_paths, y=y_test, augment_data=False)
+
+    X_train = np.array(X_train)
+    X_test = np.array(X_test)
+    y_train = np.array(y_train)
+    y_test = np.array(y_test)
+
+    data = (X_train, X_test, y_train, y_test)
+    joblib.dump(data, cache_path)
+    return data
 
 
 def main():
@@ -51,13 +69,10 @@ def main():
 
     args = parser.parse_args()
 
-    X, y = load_features(args.path, augment_data=True)
-    X, y = np.array(X), np.array(y)
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.3, random_state=args.seed)
+    X_train, X_test, y_train, y_test = load_features(args.path, seed=args.seed)
+    validation_data = (X_test, y_test)
 
     model = ModelFactory.get_model(args.model)
-    validation_data = (X_test, y_test)
     model.fit(X_train, y_train, validation_data=validation_data)
     model.generate_report(X_test, y_test)
     model.view_report()

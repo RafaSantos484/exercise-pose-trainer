@@ -63,6 +63,7 @@ class Model(abc.ABC):
             self._model, self._param_grid, n_jobs=-1, verbose=1)
         grid_search.fit(X, y)
         self._model = grid_search.best_estimator_
+        print(grid_search.best_score_)
 
     def get_params(self) -> dict:
         return self._model.get_params()

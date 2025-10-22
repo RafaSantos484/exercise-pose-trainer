@@ -103,10 +103,11 @@ class Landmarker:
         return points
 
     @classmethod
-    def get_angles_features_from_imgs(cls, imgs_paths: list[str], augment_data=False) -> tuple[list[list[float]], list[str]]:
+    def get_angles_features_from_imgs(cls, imgs_paths: list[str], y: list[str] | None = None, augment_data=False) -> tuple[list[list[float]], list[str], list[str]]:
         X = []
+        y_sucessful = []
         sucessful_img_paths = []
-        for img_path in imgs_paths:
+        for i, img_path in enumerate(imgs_paths):
             if not Utils.is_img_file(img_path):
                 continue
 
@@ -138,5 +139,7 @@ class Landmarker:
                 X.append(angles)
                 if not augment_data:
                     sucessful_img_paths.append(img_path)
+                if y is not None:
+                    y_sucessful.append(y[i])
 
-        return X, sucessful_img_paths
+        return X, y_sucessful, sucessful_img_paths

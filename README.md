@@ -4,9 +4,8 @@ Este repositório contém os scripts de treinamento de modelos de machine learni
 
 ## 📁 Estrutura do Repositório
 
-- A pasta `high_plank_multimodel` contém as imagens para treinamento e seus rótulos em `labels.json`.
+- A pasta `high_plank_imgs` contém as imagens para treinamento separados por pastas, onde o nome de cada pasta representa o rótulo de suas imagens.
 - A pasta `test` contém imagens que podem ser usadas para teste dos modelos treinados através do comando `poetry run test`.
-- As outras pastas possuem os códigos para treinamento dos respectivos modelos.
 
 ## ⚙️ Comandos
 
@@ -14,9 +13,7 @@ Este repositório contém os scripts de treinamento de modelos de machine learni
 
 ### Instalar dependências
 
-Navegue até o diretório do modelo (por exemplo, KNN):
 ```
-cd exercise-pose-trainer-knn-angles-multimodel
 poetry install
 ```
 
@@ -25,40 +22,26 @@ poetry install
 Treina o modelo e o exporta como arquivo `.pkl`.
 
 ```
-poetry run train [--seed SEED] [--plot] path
+poetry run train [--seed SEED] path {fcnn,gradient_boosting,logistic_regression,random_forest,svm}
 ```
 
 - `seed`: seed usada em `random_state` de `train_test_split`. Útil para reprodutibilidade.
-- `plot`: Deve ou não plotar gráficos do modelo ao fim do treinamento.
-- `path`: Caminho para pasta contendo imagens e labels. A pasta deve conter pasta `images` com as imagens e arquivo `labels.json`, a exemplo da pasta `high_plank_multimodel`.
+- `path`: Caminho para pasta contendo pastas com nome das classes e suas respectivas imagens, a exemplo da pasta `high_plank_imgs`.
 
 ### Ver report
 
 Plota gráficos e printa métricas do modelo.
 
 ```
-poetry run report model_path
+poetry run view_report {fcnn,gradient_boosting,logistic_regression,random_forest,svm}
 ```
-
-- `model_path`: Caminho para o modelo `.pkl` obtido do treinamento.
 
 ### Testar modelo
 
 Testa modelo treinado em imagens contidas em uma pasta.
 
 ```
-poetry run test test_path model_path
+poetry run test test_path {fcnn,gradient_boosting,logistic_regression,random_forest,svm}
 ```
 
 - `test_path`: Caminho da pasta contendo imagens a serem testadas.
-- `model_path`: Caminho para o modelo `.pkl` obtido do treinamento.
-
-### Exportar ONNX
-
-Converte arquivo `.pkl` obtido do treinamento em arquivo `.onnx`.
-
-```
-poetry run export_onnx model_path
-```
-
-- `model_path`: Caminho para o modelo `.pkl` obtido do treinamento.

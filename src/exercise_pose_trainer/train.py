@@ -72,6 +72,11 @@ def main():
     X_train, X_test, y_train, y_test = load_features(args.path, seed=args.seed)
     validation_data = (X_test, y_test)
 
+    classes, classes_counts = np.unique(y_train, return_counts=True)
+    print('Classes found and their counts in training set:')
+    for c, count in zip(classes, classes_counts):
+        print(f'{c}: {count}')
+
     model = ModelFactory.get_model(args.model)
     model.fit(X_train, y_train, validation_data=validation_data)
     model.generate_report(X_test, y_test)

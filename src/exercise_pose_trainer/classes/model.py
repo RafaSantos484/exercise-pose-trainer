@@ -2,6 +2,7 @@ import abc
 import os
 
 import joblib
+from matplotlib import pyplot as plt
 import numpy as np
 from sklearn import svm
 from sklearn.base import BaseEstimator
@@ -129,11 +130,11 @@ class _FCNNModel(IClassifier):
             validation_data = (X_val, y_val_onehot)
 
         early_stopping_callback = EarlyStopping(
-            patience=200, restore_best_weights=True)
-        reduce_lr_callback = ReduceLROnPlateau(patience=50)
+            patience=50, restore_best_weights=True)
+        reduce_lr_callback = ReduceLROnPlateau(patience=30)
         self._history = self._model.fit(X, y_onehot,
-                                        epochs=10000,
-                                        # epochs=1000,
+                                        # epochs=10000,
+                                        epochs=1000,
                                         # epochs=100,
                                         validation_data=validation_data,
                                         callbacks=[early_stopping_callback,
@@ -156,6 +157,28 @@ class _FCNNModel(IClassifier):
         print('test report:')
         print(self._report)
         print(self._cm)
+
+        # Accuracy
+        plt.figure()
+        plt.plot(
+            self._history.history['categorical_accuracy'], label='Train Accuracy')
+        plt.plot(self._history.history['val_categorical_accuracy'],
+                 label='Validation Accuracy')
+        plt.title(f'{self.get_name()} Model Accuracy')
+        plt.xlabel('Epoch')
+        plt.ylabel('Accuracy')
+        plt.legend()
+
+        # Loss
+        plt.figure()
+        plt.plot(self._history.history['loss'], label='Train Loss')
+        plt.plot(self._history.history['val_loss'], label='Validation Loss')
+        plt.title(f'{self.get_name()} Model Loss')
+        plt.xlabel('Epoch')
+        plt.ylabel('Loss')
+        plt.legend()
+
+        plt.show()
 
     def save_model(self) -> None:
         os.makedirs(os.path.join('models', self.get_name()), exist_ok=True)
@@ -257,7 +280,7 @@ class _LogisticRegressionModel(SklearnModel):
             "penalty": [None, "l1", "l2", "elasticnet"],
             "C": [0.01, 0.1, 1, 10, 100],
             "solver": ["lbfgs", "liblinear", "newton-cg", "newton-cholesky", "sag", "saga"],
-            "max_iter": [100, 1000, 10000]
+            "max_iter": [10, 100, 1000, 10000]
         }
 
 
